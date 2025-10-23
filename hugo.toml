@@ -1,0 +1,25 @@
+baseURL = 'https://zereker.github.io/my-learning-notes/'
+languageCode = 'zh-cn'
+title = '我的学习笔记'
+theme = 'book'
+
+[params]
+  BookRepo = 'https://github.com/Zereker/my-learning-notes'
+  BookEditPage = true
+  BookSearch = true
+  BookMenuBundle = '/menu'
+  BookSection = '*'
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+  [markup.highlight]
+    style = 'vs'
+    lineNos = true
+
+[menu]
+  [[menu.before]]
+    name = "首页"
+    url = "/"
+    weight = 1
