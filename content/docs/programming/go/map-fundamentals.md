@@ -108,16 +108,91 @@ Go 的并发模型是"**不要通过共享内存来通信，而要通过通信�
 - `noempty` (4)：历史用途（标记溢出桶不为空），现基本保留为占位。
 - `minTopHash` (5)：正常 key 的最小 `tophash`。若计算值 < 5，会加偏移以避开状态区间。
 
-## 3. 遍历无序与复杂度特性
+## 3. 核心机制：查找、插入与删除
 
-### a) 为何无序
+### a) 查找流程
 
-**语言层面故意设计**。运行时在 `for range` 开始时随机选择桶与槽位作为起点，防止代码依赖内部顺序，从而为未来实现演进留足空间。
+```go
+// map查找的核心步骤
+func mapAccess(m *hmap, key interface{}) (value, bool) {
+    // 1. 计算key的哈希值
+    hash := alg.hash(key, uintptr(m.hash0))
+    
+    // 2. 确定桶的位置
+    bucket := hash & bucketMask(m.B)
+    
+    // 3. 计算tophash
+    top := tophash(hash)
+    
+    // 4. 在桶中查找
+    for b := (*bmap)(add(m.buckets, bucket*uintptr(t.bucketsize))); b != nil; b = b.overflow(t) {
+        for i := uintptr(0); i < bucketCnt; i++ {
+            if b.tophash[i] != top {
+                continue
+            }
+            k := add(unsafe.Pointer(b), dataOffset+i*uintptr(t.keysize))
+            if t.key.equal(key, k) {
+                v := add(unsafe.Pointer(b), dataOffset+bucketCnt*uintptr(t.keysize)+i*uintptr(t.valuesize))
+                return v, true
+            }
+        }
+    }
+    return nil, false
+}
+```
 
-### b) 复杂度
+### b) 插入机制
 
-- **增删查的平均（摊销）**时间复杂度为 **O(1)**。
-- **最坏 O(n)**：极端哈希碰撞导致长溢出链，查找退化为链表遍历；实践中极罕见。
+**插入流程：**
+1. **哈希定位**：计算key哈希，确定目标桶
+2. **查找空槽**：在桶中寻找空的tophash位置
+3. **处理冲突**：如果桶满，创建溢出桶
+4. **触发扩容**：检查装载因子，必要时启动扩容
+
+**扩容触发条件：**
+- **装载因子超阈值**：`count/2^B > 6.5`
+- **溢出桶过多**：`noverflow >= 2^(B&15)`
+
+### c) 删除机制
+
+```go
+// 删除并不真正释放内存，而是标记为空
+func mapDelete(m *hmap, key interface{}) {
+    // 找到key的位置
+    b, i := mapAccessKey(m, key)
+    if b == nil {
+        return // key不存在
+    }
+    
+    // 标记tophash为emptyCell
+    b.tophash[i] = emptyCell
+    
+    // 清零key和value
+    clearKey(b, i)
+    clearValue(b, i)
+    
+    m.count--
+}
+```
+
+### d) 遍历机制与随机化
+
+**随机起点选择：**
+```go
+// mapiterinit 随机选择起始桶和槽位
+func mapiterinit(t *maptype, h *hmap, it *hiter) {
+    // 随机选择起始桶
+    it.startBucket = fastrand() % bucketShift(h.B)
+    
+    // 随机选择桶内起始位置
+    it.offset = uint8(fastrand() % bucketCnt)
+}
+```
+
+**设计目的：**
+- 防止代码依赖map的内部顺序
+- 为未来实现演进提供自由度
+- 强制开发者编写顺序无关的代码
 
 ## 4. 开发者必知实践
 
@@ -224,53 +299,98 @@ val, ok := m.Load("key")
 
 **O(n)**，存储 n 个键值对。
 
-## 6. Swiss Table 方案（最新版本）
+## 6. 高级主题：map的演进与优化
 
-> **结论**：最新版本采用 Swiss Table 方案，并在实现上做了针对 Go 运行时与缓存行为的适配优化。
+### a) Swiss Table 优化方案
 
-### a) 方案要点
+> Go团队正在考虑采用Swiss Table方案来进一步优化map性能。
 
-- **开放寻址 + 分组探测（Group Probing）**：利用 `tophash` 小片段在一个分组内批量筛选命中槽位，减少随机访存。
-- **SIMD/字节并行友好**：`tophash` 连续存放，便于一次性加载并并行比对。
-- **缓存局部性**：紧凑布局降低溢出链依赖，提升 L1 命中。
-- **增量迁移**：保持与现有增量扩容模型兼容，避免延迟尖刺。
+**核心思想：**
+- **开放寻址 + 分组探测**：减少指针跳转，提升缓存局部性
+- **SIMD友好设计**：`tophash`连续存放，支持向量化比较
+- **增量迁移兼容**：保持现有扩容模型，避免延迟尖刺
 
-### b) 核心数据结构映射
+**预期收益：**
+- 高装载因子下性能提升
+- 减少L1 Cache Miss
+- 降低P99延迟
 
-- `bucket` 内部改为更"紧凑"的 `tophash` 段 + 紧随的 keys、values，分组大小与 CPU cache line 对齐。
-- `tophash` 采用高位截断并偏移到 `minTopHash` 以上，预留状态位以标示空槽与迁移状态。
+### b) map的内存优化
 
-### c) 查找与插入流程（伪代码）
-
+**减少内存分配：**
 ```go
-// probe(key): 查找或插入
-// 1) h := hash(key)
-// 2) b := bucketOf(h)              // 定位起始桶
-// 3) group := b.group(h)           // 分组起点（按分组大小对齐）
-// 4) mask := match(group.tophash, top8(h)) // 向量或字节并行比对
-// 5) for i in ones(mask) {         // 遍历可能命中的槽位
-//        if keys[i] == key {
-//            return values[i], true
-//        }
-//    }
-// 6) if exist emptyCell in group {  // 组内存在空槽
-//        insert(key, value); return true
-//    }
-// 7) group = nextGroup(h)           // 二次探测或步长步进，前进到下一组
-// 8) goto 4
+// 预分配容量，避免多次扩容
+m := make(map[string]int, 1000)
+
+// 对于大型map，考虑分片减少锁竞争
+type ShardedMap struct {
+    shards []map[string]int
+    locks  []sync.RWMutex
+}
+
+func (sm *ShardedMap) getShard(key string) int {
+    h := fnv.New32a()
+    h.Write([]byte(key))
+    return int(h.Sum32()) % len(sm.shards)
+}
 ```
 
-### d) 扩容与迁移
+### c) map与泛型
 
-- 沿用现有 **Double-Size** 与 **Same-Size** 两种模式。
-- 迁移时按"分组"为最小搬迁单位，减少散乱写放大。
-- 读取路径可判定新旧桶来源，避免读触发搬迁。
+Go 1.18引入泛型后，map的使用更加类型安全：
 
-### e) 性能预期与指标
+```go
+// 泛型map操作函数
+func Keys[K comparable, V any](m map[K]V) []K {
+    keys := make([]K, 0, len(m))
+    for k := range m {
+        keys = append(keys, k)
+    }
+    return keys
+}
 
-- 在高装载因子下，平均探测步数下降，长尾延迟减少。
-- **预计提升点**：查找 QPS、P99 延迟、CPU 指标（L1 miss 率下降）。
-- **建议压测维度**：装载因子曲线、key 分布（均匀/热点）、同键更新占比。
+func Values[K comparable, V any](m map[K]V) []V {
+    values := make([]V, 0, len(m))
+    for _, v := range m {
+        values = append(values, v)
+    }
+    return values
+}
+
+// 使用示例
+m := map[string]int{"a": 1, "b": 2}
+keys := Keys(m)    // []string{"a", "b"}
+values := Values(m) // []int{1, 2}
+```
+
+### d) 高性能map实现
+
+**对于特定场景的优化：**
+```go
+// 整数key的优化map
+type IntMap struct {
+    buckets [][]Entry
+    mask    uint64
+}
+
+type Entry struct {
+    key   uint64
+    value interface{}
+    hash  uint64
+}
+
+// 避免interface{}装箱的string map
+type StringMap struct {
+    entries []stringEntry
+    indices map[uint64]int // hash -> index
+}
+
+type stringEntry struct {
+    key   string
+    value string
+    hash  uint64
+}
+```
 
 ## 7. 面试题深度解析
 
