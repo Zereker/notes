@@ -105,7 +105,37 @@ type slice struct {
 3. 在新数组末尾添加新元素。
 4. 返回一个**新的切片头**，其 `Pointer` 指向**这个新数组**，`Len` 和 `Cap` 都已更新。
 
-## 3. `nil` 切片 vs 空切片深度分析
+## 3. 核心机制：内存管理与扩容
+
+### a) append 的扩容机制
+
+**扩容策略（Go 1.18+）：**
+- 当前容量 < 256：翻倍增长
+- 当前容量 ≥ 256：按 `(oldcap + 3*256) / 4` 的公式增长
+
+```go
+// append 扩容的核心逻辑
+func growslice(et *_type, old slice, cap int) slice {
+    newcap := old.cap
+    doublecap := newcap + newcap
+    if cap > doublecap {
+        newcap = cap
+    } else {
+        const threshold = 256
+        if old.cap < threshold {
+            newcap = doublecap
+        } else {
+            for 0 < newcap && newcap < cap {
+                newcap += (newcap + 3*threshold) / 4
+            }
+        }
+    }
+    // 内存分配和数据拷贝
+    return slice{ptr: newptr, len: old.len, cap: newcap}
+}
+```
+
+### b) `nil` 切片 vs 空切片深度分析
 
 这是 Go 切片中一个重要但经常被忽视的概念。
 
@@ -137,7 +167,25 @@ s := []int{}
 **重要说明：**
 `append`, `len`, `cap`, `range` 等操作在两种切片上的行为完全一致。
 
-## 4. 常见陷阱与最佳实践
+### c) 切片的内存布局
+
+```go
+// 切片在内存中的实际布局
+type slice struct {
+    array unsafe.Pointer // 8字节：指向底层数组
+    len   int            // 8字节：当前长度  
+    cap   int            // 8字节：容量
+}
+// 总计24字节（64位系统）
+
+// 多个切片可能共享同一底层数组
+arr := [...]int{0, 1, 2, 3, 4, 5}
+s1 := arr[1:4]  // {1, 2, 3}
+s2 := arr[2:5]  // {2, 3, 4}
+// s1和s2的底层数组是同一个arr
+```
+
+## 4. 开发者必知实践
 
 ### a) `append` 陷阱：覆盖原切片数据
 
