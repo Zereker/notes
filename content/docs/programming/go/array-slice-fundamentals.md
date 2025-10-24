@@ -215,46 +215,203 @@ func main() {
   - 偶尔发生扩容时是 O(N)，需要拷贝 N 个元素
   - 由于容量是指数级增长，昂贵的 O(N) 操作被大量廉价的 O(1) 操作分摊了，平均下来依然是 O(1)
 
-## 6. 最佳实践总结
+## 6. 高级主题：切片的最新发展
+
+### a) 泛型与切片
+
+Go 1.18引入泛型后，切片操作更加类型安全：
+
+```go
+// 泛型切片操作
+func Filter[T any](slice []T, predicate func(T) bool) []T {
+    result := make([]T, 0, len(slice))
+    for _, v := range slice {
+        if predicate(v) {
+            result = append(result, v)
+        }
+    }
+    return result
+}
+
+// 使用示例
+numbers := []int{1, 2, 3, 4, 5}
+evens := Filter(numbers, func(n int) bool { return n%2 == 0 })
+```
+
+### b) 切片表达式的新语法
+
+```go
+// 完整切片表达式：s[low:high:max]
+s := make([]int, 5, 10)
+s2 := s[1:3:4] // len=2, cap=3，限制了容量
+```
+
+## 7. 面试题深度解析
+
+### a) 问题 1：切片与数组的区别
+
+**题目：**
+解释Go语言中数组和切片的底层区别，以及为什么Go需要两种序列类型？
+
+**标准答案：**
+
+1. **底层结构：**
+   - **数组**：连续内存块，长度是类型的一部分，值类型
+   - **切片**：包含指针、长度、容量的结构体，引用类型
+
+2. **设计哲学：**
+   - **数组**：内存精确掌控，编译期确定大小，值拷贝保证安全
+   - **切片**：灵活性和效率，分离数据存储与数据视图
+
+3. **使用场景：**
+   ```go
+   // 数组：固定大小，值拷贝
+   var arr [5]int = [5]int{1, 2, 3, 4, 5}
+   
+   // 切片：动态大小，引用底层数组
+   var slice []int = []int{1, 2, 3, 4, 5}
+   ```
+
+### b) 问题 2：append陷阱分析
+
+**题目：**
+分析以下代码的输出结果并解释原因：
+
+```go
+s1 := []int{1, 2, 3, 4, 5}
+s2 := s1[1:3]
+s2 = append(s2, 99)
+fmt.Println(s1) // 输出什么？
+```
+
+**标准答案：**
+- **现象原因：** 输出 `[1 2 3 99 5]`，s1[3] 被覆盖
+- **底层机制：**
+  1. `s2 := s1[1:3]` 创建切片 `{2,3}`，但cap=4，共享底层数组
+  2. `append(s2, 99)` 时容量足够，直接在s1[3]位置写入99
+  3. s1和s2共享同一底层数组，所以s1被影响
+- **解决方案：** 使用完整切片表达式或copy创建独立副本
+
+```go
+// 方案1：限制容量
+s2 := s1[1:3:3] // cap=2，append时必须扩容
+
+// 方案2：创建副本
+s2 := make([]int, 2)
+copy(s2, s1[1:3])
+```
+
+### c) 问题 3：nil切片vs空切片
+
+**题目：**
+`var s []int` 和 `s := []int{}` 有什么区别？在什么场景下这种区别很重要？
+
+**标准答案：**
+
+| 特性 | nil切片 | 空切片 |
+|------|---------|--------|
+| 内部指针 | nil | 指向有效地址 |
+| `s == nil` | true | false |
+| JSON序列化 | null | [] |
+| 内存占用 | 无额外分配 | 分配零长度数组 |
+
+**重要场景：**
+```go
+// API返回值的语义差异
+func GetUsers() []User {
+    // nil切片：表示"未查询"或"不适用"
+    if !hasPermission {
+        return nil
+    }
+    
+    // 空切片：表示"查询了但没有结果"
+    return []User{}
+}
+
+// JSON序列化差异
+type Response struct {
+    Users []User `json:"users"`
+}
+// nil -> {"users": null}
+// []User{} -> {"users": []}
+```
+
+### d) 问题 4：切片扩容机制
+
+**题目：**
+描述Go切片的扩容策略，以及如何优化大量append操作的性能？
+
+**标准答案：**
+1. **扩容策略：**
+   - 容量 < 256：翻倍增长
+   - 容量 ≥ 256：增长因子约1.25（更精确地说是 `newcap = oldcap + (oldcap+3*256)/4`）
+
+2. **性能优化：**
+   - **预分配容量**：`make([]T, 0, expectedSize)`
+   - **批量操作**：减少append次数
+   - **避免频繁扩容**：根据数据量级估算初始容量
+
+3. **实现示例：**
+   ```go
+   // 不好：频繁扩容
+   var result []int
+   for i := 0; i < 10000; i++ {
+       result = append(result, i)
+   }
+   
+   // 好：预分配
+   result := make([]int, 0, 10000)
+   for i := 0; i < 10000; i++ {
+       result = append(result, i)
+   }
+   ```
+
+## 8. 最佳实践总结
 
 ### a) 切片容量预分配
 
 ```go
-// 不好：频繁扩容
-var result []int
-for i := 0; i < 1000; i++ {
-    result = append(result, i)
-}
-
-// 好：预分配容量
-result := make([]int, 0, 1000)
-for i := 0; i < 1000; i++ {
-    result = append(result, i)
+// 场景：已知大概数据量
+func ProcessLargeData(size int) []Result {
+    // 预分配容量，避免多次扩容
+    results := make([]Result, 0, size)
+    for i := 0; i < size; i++ {
+        results = append(results, process(i))
+    }
+    return results
 }
 ```
 
 ### b) 避免切片内存泄漏
 
 ```go
-// 潜在内存泄漏：小切片引用大数组
-func processLargeSlice(large []byte) []byte {
-    return large[:10] // 整个 large 数组无法被 GC
+// 避免：小切片引用大数组
+func BadSubSlice(large []byte) []byte {
+    return large[:10] // 整个large数组无法被GC
 }
 
-// 正确做法：创建独立副本
-func processLargeSlice(large []byte) []byte {
+// 推荐：创建独立副本
+func GoodSubSlice(large []byte) []byte {
     result := make([]byte, 10)
     copy(result, large[:10])
     return result
 }
 ```
 
-### c) 安全的切片重置
+### c) 安全的切片操作
 
 ```go
-// 保留容量但清空内容
+// 清空切片但保留容量
 slice = slice[:0]
 
-// 完全重置（如果需要释放内存）
+// 完全重置（释放内存）
 slice = nil
+
+// 安全的切片传递（防止意外修改）
+func SafeProcess(data []int) {
+    // 创建副本进行处理
+    temp := make([]int, len(data))
+    copy(temp, data)
+    // 对temp进行操作...
+}
 ```
