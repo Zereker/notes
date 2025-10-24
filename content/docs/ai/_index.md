@@ -1,6 +1,6 @@
 ---
-title: "AI 人工智能"
-weight: 5
+title: "🤖 AI 人工智能"
+weight: 1
 bookCollapseSection: false
 ---
 
