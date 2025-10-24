@@ -97,10 +97,101 @@ bookCollapseSection: false
 4. **理解多模态AI应用**：处理文本、图像、视频等多种数据类型
 5. **具备模型微调能力**：训练垂直领域的专业化模型
 
+**课程14：Fine-tuning实操**
+- Unsloth高效微调框架使用
+- 垂类模型训练（中文医疗、金融客服）
+- **案例**：50美金复刻R1模型、YAML配置助手
+
+### 模块3：Coze和Dify工作原理和应用技术
+
+**课程15：Coze工作原理与应用实例**
+- Agent与Copilot核心区别
+- 插件系统与工作流设计
+- **案例**：AI新闻Agent、抖音文案提取、古诗词Agent
+
+**课程16：Agent进阶实战与插件开发**
+- 批处理与多Agents协作模式
+- 复杂工作流设计与插件开发
+- **案例**：古诗词绘画、智能投顾助手、客户分层营销
+
+**课程17：Dify本地化部署和应用**
+- Docker Compose本地化部署
+- WorkFlow与ChatFlow应用开发
+- **案例**：智能文档分析助手、API集成扩展
+
+### 模块4：进阶知识：机器学习与AI大赛
+
+**课程18：分析式AI基础**
+- 分析式AI与生成式AI区别
+- 十大经典机器学习算法详解
+- **项目**：二手车价格预测、完整数据建模流程
+
+**课程19：不同领域的AI算法**
+- 金融行业AI应用（风控模型、期货套利）
+- 制造业缺陷检测、快消行业供应链优化
+- **AI大赛进阶**：特征工程优化技巧
+
+**课程20：时间序列AI大赛**
+- 时间序列分析（AR、MA、ARMA、ARIMA）
+- **实战**：沪市指数预测、资金流动预测、周期因子分析
+
+### 模块5：深度学习应用与实战
+
+**课程21：神经网络基础与TensorFlow实战**
+- 神经网络核心原理与numpy实现
+- TensorFlow分布式训练与模型部署
+- **实战**：Keras神经网络、二手车价格预测
+
+**课程22：PyTorch与视觉检测**
+- PyTorch张量计算与自动求导机制
+- YOLO算法演进（v1到v12）
+- **工业项目**：钢铁表面缺陷检测系统
+
+### 模块6：AI大模型应用落地实战
+
+**课程23：企业知识库（RAG大赛冠军项目）**
+- RAG冠军方案复现（多路由+动态知识库）
+- 高级RAG技术（重排序、父页面检索、思维链）
+- **企业级系统**：完整知识库搭建与前端部署
+
+**课程24：交互式BI报表（AI量化交易助手）**
+- ChatBI系统设计与智能分析功能
+- ARIMA预测、布林带异常检测、Prophet周期分析
+- **核心功能**：股票分析、趋势预测、新闻查询
+
+**课程25：AI智慧运营助手（百万客群经营）**
+- 多模态客户画像与动态标签生成
+- 多Agent协作架构（分析+推荐+话术Agent）
+- **应用**：精准营销、客户分层、SHAP模型解释
+
+**课程26：AI搜索类应用（知乎直答）**
+- AI搜索架构设计与混合检索技术
+- 个性化推荐与语义匹配优化
+- **技术实现**：Faiss索引、DeepSeek模型、交互界面
+
+## 学习目标
+
+通过完整的课程体系学习，您将：
+
+1. **掌握AI大模型的完整技术栈**：从基础API调用到高级应用开发
+2. **具备Prompt工程和AI编程能力**：熟练使用各种AI工具提升开发效率  
+3. **精通RAG和Agent开发**：构建企业级AI应用和智能体系统
+4. **理解多模态AI应用**：处理文本、图像、视频等多种数据类型
+5. **具备模型微调能力**：训练垂直领域的专业化模型
+6. **掌握无代码AI开发**：熟练使用Coze、Dify等平台快速原型开发
+7. **具备传统ML项目能力**：机器学习算法与AI竞赛建模技巧
+8. **精通深度学习框架**：TensorFlow、PyTorch工业级项目开发
+9. **拥有企业项目实战经验**：4个完整的AI应用落地项目
+
 ## 技术栈覆盖
 
-- **大模型平台**：ChatGPT、Claude、Qwen、DeepSeek等
-- **开发工具**：Cursor、LangChain、Qwen-Agent等
-- **向量数据库**：FAISS、Milvus、Pinecone
-- **微调框架**：Unsloth、LoRA、PEFT
-- **多模态模型**：Qwen-VL、InternVideo2、MinerU
+- **大模型平台**：ChatGPT、Claude、Qwen、DeepSeek、Gemini
+- **开发工具**：Cursor、LangChain、Qwen-Agent、Coze、Dify
+- **向量数据库**：FAISS、Milvus、Pinecone、ChromaDB
+- **微调框架**：Unsloth、LoRA、PEFT、QLoRA
+- **多模态模型**：Qwen-VL、InternVideo2、MinerU、GPT-4V
+- **深度学习**：TensorFlow、PyTorch、Keras、PyTorch Lightning
+- **传统ML**：Scikit-learn、XGBoost、LightGBM、CatBoost
+- **时间序列**：statsmodels、Prophet、ARIMA
+- **可视化**：Streamlit、Gradio、Plotly、Matplotlib
+- **部署运维**：Docker、Kubernetes、FastAPI、Flask
