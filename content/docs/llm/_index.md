@@ -9,13 +9,11 @@ weight: 1
 
 ## 内容结构
 
-### 基础理论
-- [大语言模型基础理论问答实录](llm-fundamentals-qa.md) - Transformer架构、注意力机制、训练范式等核心概念详解
+### [基础理论](fundamentals/)
+- [大语言模型基础理论问答实录](fundamentals/llm-fundamentals-qa.md) - Transformer架构、注意力机制、训练范式等核心概念详解
 
-### 实践应用
-- API使用与集成
-- 模型微调与优化
-- 性能调优与部署
+### [Audio 大模型](audio/)
+- [TTS 模型对比](audio/tts-models.md) - 主流语音合成模型对比与分析
 
 ---
 
