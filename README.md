@@ -4,14 +4,14 @@
 
 ## 在线访问
 
-- 网站地址：https://zereker.github.io/my-learning-notes/
+- 网站地址：https://zereker.github.io/notes/
 
 ## 本地开发
 
 ```bash
 # 克隆仓库
-git clone --recursive https://github.com/Zereker/my-learning-notes.git
-cd my-learning-notes
+git clone --recursive https://github.com/Zereker/notes.git
+cd notes
 
 # 安装 Hugo (如果未安装)
 brew install hugo

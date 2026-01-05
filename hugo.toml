@@ -1,10 +1,10 @@
-baseURL = 'https://zereker.github.io/my-learning-notes/'
+baseURL = 'https://zereker.github.io/notes/'
 languageCode = 'zh-cn'
 title = '我的学习笔记'
 theme = 'book'
 
 [params]
-  BookRepo = 'https://github.com/Zereker/my-learning-notes'
+  BookRepo = 'https://github.com/Zereker/notes'
   BookEditPage = true
   BookSearch = true
   BookMenuBundle = '/menu'
