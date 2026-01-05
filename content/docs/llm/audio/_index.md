@@ -5,18 +5,23 @@ weight: 2
 
 # Audio 大模型笔记
 
-本目录收录语音合成 (TTS)、语音识别 (ASR) 等音频大模型相关的学习笔记。
+语音合成 (TTS)、语音识别 (ASR) 等音频大模型相关的学习笔记。
 
-## 内容结构
+## 内容
 
-### TTS (Text-to-Speech)
-- 主流 TTS 模型对比与分析
+### 基础
+- [音频数据处理](audio-data.md)
+- [Transformers Pipelines](pipelines.md)
+- [音频 Transformer 架构](architectures.md)
 
-### ASR (Automatic Speech Recognition)
-- *待补充*
+### 实战
+- [音乐流派分类](music-classifier.md)
+- [语音识别 (ASR)](asr.md)
+- [语音合成 (TTS)](tts.md)
+- [音频应用](applications.md)
 
-### 语音克隆
-- *待补充*
+### 扩展
+- [TTS 模型对比](tts-models.md)
 
 ---
 
